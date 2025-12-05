@@ -1,0 +1,7 @@
+export { Login } from './Login'
+export { Dashboard } from './Dashboard'
+export { Attendance } from './Attendance'
+export { Children } from './Children'
+export { EventLogs } from './EventLogs'
+export { VideoPlayback } from './VideoPlayback'
+export { Settings } from './Settings'
