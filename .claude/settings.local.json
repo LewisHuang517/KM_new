@@ -6,7 +6,8 @@
       "Bash(cmd /c move \"d:\\face_recognition\\KM_new\\frontend-ui-design.md\" \"d:\\face_recognition\\KM_new\\plan_UI.md\")",
       "Bash(npm install)",
       "Bash(npm install:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
