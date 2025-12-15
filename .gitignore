@@ -1,0 +1,7 @@
+# IDE and tool folders
+.claude/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
