@@ -6,6 +6,10 @@
   <title>KindyGuard - Kindergarten Face Recognition Access System</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <!-- Flatpickr Date Picker -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh-tw.js"></script>
   <style>
     * { font-family: 'Inter', sans-serif; }
 
@@ -172,7 +176,7 @@
           </svg>
           Dismiss Alert
         </button>
-        <button onclick="closeAlert(); switchTab('playback')" class="flex-1 bg-white/20 text-white font-bold py-3 px-6 rounded-xl hover:bg-white/30 transition flex items-center justify-center gap-2">
+        <button onclick="viewAlertRecording()" class="flex-1 bg-white/20 text-white font-bold py-3 px-6 rounded-xl hover:bg-white/30 transition flex items-center justify-center gap-2">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
           </svg>
@@ -269,6 +273,165 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
           </svg>
           Source: Local Video
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Special Mode Modal -->
+  <div id="specialModeModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70">
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 overflow-hidden fade-in">
+      <div class="flex items-center justify-between p-4 border-b">
+        <h3 class="text-gray-800 font-bold text-lg">Add Special Mode</h3>
+        <button onclick="closeSpecialModeModal()" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="p-6">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Mode Name</label>
+            <input type="text" id="specialModeName" placeholder="e.g., Field Trip, Swimming Class"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Class</label>
+            <select id="specialModeClass" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <option value="">Select Class</option>
+              <option value="Class A">Class A</option>
+              <option value="Class B">Class B</option>
+              <option value="Class C">Class C</option>
+              <option value="All Classes">All Classes</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Start Date & Time</label>
+            <input type="text" id="specialModeStart" placeholder="YY/MM/DD HH:MM"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readonly>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">End Date & Time</label>
+            <input type="text" id="specialModeEnd" placeholder="YY/MM/DD HH:MM"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readonly>
+          </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+          <button onclick="closeSpecialModeModal()" class="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50">
+            Cancel
+          </button>
+          <button onclick="addSpecialMode()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            Add
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Child Modal -->
+  <div id="addChildModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70">
+    <div class="bg-white rounded-2xl max-w-2xl w-full mx-4 overflow-hidden fade-in max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between p-4 border-b">
+        <h3 class="text-gray-800 font-bold text-lg">Add New Child</h3>
+        <button onclick="closeAddChildModal()" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input type="text" id="newChildName" placeholder="Enter name"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Class</label>
+            <select id="newChildClass" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <option value="">Select Class</option>
+              <option value="Class A">Class A</option>
+              <option value="Class B">Class B</option>
+              <option value="Class C">Class C</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
+            <input type="text" id="newChildId" placeholder="e.g., 000001"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          </div>
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-gray-700 mb-3">Face Registration Photos (5 angles required)</label>
+          <div class="grid grid-cols-5 gap-3">
+            <div class="text-center">
+              <div class="aspect-square bg-gray-100 rounded-xl flex items-center justify-center mb-2 border-2 border-dashed border-gray-300 hover:border-blue-400 cursor-pointer relative overflow-hidden">
+                <img id="photoFront" src="" class="w-full h-full object-cover hidden">
+                <div id="placeholderFront" class="flex flex-col items-center text-gray-400">
+                  <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                </div>
+              </div>
+              <span class="text-xs text-gray-500">Front</span>
+            </div>
+            <div class="text-center">
+              <div class="aspect-square bg-gray-100 rounded-xl flex items-center justify-center mb-2 border-2 border-dashed border-gray-300 hover:border-blue-400 cursor-pointer relative overflow-hidden">
+                <img id="photoLeft" src="" class="w-full h-full object-cover hidden">
+                <div id="placeholderLeft" class="flex flex-col items-center text-gray-400">
+                  <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                </div>
+              </div>
+              <span class="text-xs text-gray-500">Left</span>
+            </div>
+            <div class="text-center">
+              <div class="aspect-square bg-gray-100 rounded-xl flex items-center justify-center mb-2 border-2 border-dashed border-gray-300 hover:border-blue-400 cursor-pointer relative overflow-hidden">
+                <img id="photoRight" src="" class="w-full h-full object-cover hidden">
+                <div id="placeholderRight" class="flex flex-col items-center text-gray-400">
+                  <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                </div>
+              </div>
+              <span class="text-xs text-gray-500">Right</span>
+            </div>
+            <div class="text-center">
+              <div class="aspect-square bg-gray-100 rounded-xl flex items-center justify-center mb-2 border-2 border-dashed border-gray-300 hover:border-blue-400 cursor-pointer relative overflow-hidden">
+                <img id="photoUp" src="" class="w-full h-full object-cover hidden">
+                <div id="placeholderUp" class="flex flex-col items-center text-gray-400">
+                  <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                </div>
+              </div>
+              <span class="text-xs text-gray-500">Up</span>
+            </div>
+            <div class="text-center">
+              <div class="aspect-square bg-gray-100 rounded-xl flex items-center justify-center mb-2 border-2 border-dashed border-gray-300 hover:border-blue-400 cursor-pointer relative overflow-hidden">
+                <img id="photoDown" src="" class="w-full h-full object-cover hidden">
+                <div id="placeholderDown" class="flex flex-col items-center text-gray-400">
+                  <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                </div>
+              </div>
+              <span class="text-xs text-gray-500">Down</span>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-2">* In demo mode, sample photos will be auto-generated</p>
+        </div>
+
+        <div class="flex justify-end gap-3">
+          <button onclick="closeAddChildModal()" class="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50">
+            Cancel
+          </button>
+          <button onclick="addNewChild()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            Add Child
+          </button>
         </div>
       </div>
     </div>
@@ -387,12 +550,24 @@
             Simulate Alert
           </button>
           <!-- 通知 -->
-          <button class="relative p-2 text-gray-500 hover:text-gray-700">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-            </svg>
-            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
+          <div class="relative">
+            <button onclick="toggleNotifications()" class="relative p-2 text-gray-500 hover:text-gray-700">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+              </svg>
+              <span id="notificationBadge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+            <!-- Notification Dropdown -->
+            <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50">
+              <div class="p-3 border-b border-gray-100 flex items-center justify-between">
+                <span class="font-semibold text-gray-800">Notifications</span>
+                <button onclick="switchTab('events'); closeNotifications()" class="text-blue-600 text-sm hover:underline">View All</button>
+              </div>
+              <div id="notificationList" class="max-h-80 overflow-y-auto">
+                <!-- Dynamically rendered -->
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -439,7 +614,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-gray-500 text-sm">Checked Out</p>
-                <p class="text-3xl font-bold text-orange-600">1</p>
+                <p class="text-3xl font-bold text-orange-600">2</p>
               </div>
               <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
                 <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -492,9 +667,6 @@
                     <span class="w-2 h-2 bg-red-500 rounded-full blink"></span>
                     <span id="cam1Label">CAM-01 Entrance</span>
                   </div>
-                  <div class="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded" id="cam1Time">
-                    09:15:30
-                  </div>
                   <!-- NAS Recording Indicator -->
                   <div class="absolute bottom-3 right-3 bg-blue-500/80 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
                     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
@@ -515,9 +687,6 @@
                     <span class="w-2 h-2 bg-red-500 rounded-full blink"></span>
                     <span id="cam2Label">CAM-02 Perimeter/Playground</span>
                   </div>
-                  <div class="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded" id="cam2Time">
-                    09:15:30
-                  </div>
                   <div class="absolute bottom-3 right-3 bg-blue-500/80 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
                     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                       <circle cx="12" cy="12" r="6"/>
@@ -536,9 +705,6 @@
                   <div class="absolute top-3 left-3 bg-black/50 text-white text-xs px-2 py-1 rounded flex items-center gap-2">
                     <span class="w-2 h-2 bg-red-500 rounded-full blink"></span>
                     <span id="cam3Label">CAM-03 Exit</span>
-                  </div>
-                  <div class="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded" id="cam3Time">
-                    09:15:30
                   </div>
                   <div class="absolute bottom-3 right-3 bg-blue-500/80 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
                     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
@@ -587,18 +753,25 @@
             <div class="glass-card rounded-2xl p-5">
               <div class="flex items-center justify-between mb-4">
                 <h3 class="font-bold text-gray-800">Special Mode (Override)</h3>
-                <button class="text-blue-600 text-sm hover:underline">+ Add</button>
+                <button onclick="openSpecialModeModal()" class="text-blue-600 text-sm hover:underline">+ Add</button>
               </div>
 
-              <div class="bg-blue-50 rounded-xl p-4">
-                <div class="flex items-center gap-2 mb-2">
-                  <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                  </svg>
-                  <span class="font-medium text-blue-800">Field Trip</span>
+              <div id="specialModeList" class="space-y-3">
+                <div class="bg-blue-50 rounded-xl p-4 relative group">
+                  <button onclick="this.parentElement.remove()" class="absolute top-2 right-2 text-blue-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                  </button>
+                  <div class="flex items-center gap-2 mb-2">
+                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <span class="font-medium text-blue-800">Field Trip</span>
+                  </div>
+                  <p class="text-sm text-blue-600">Class B · 10:00-14:00</p>
+                  <p class="text-xs text-blue-400 mt-1">Exit alerts suspended</p>
                 </div>
-                <p class="text-sm text-blue-600">Class B · 10:00-14:00</p>
-                <p class="text-xs text-blue-400 mt-1">15 children · Exit alerts suspended</p>
               </div>
             </div>
           </div>
@@ -778,7 +951,7 @@
                 <option value="Class C">Class C</option>
               </select>
             </div>
-            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+            <button onclick="openAddChildModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
               </svg>
@@ -990,6 +1163,76 @@
       document.getElementById('pageTitle').textContent = titles[tabName] || 'Live Monitoring Center';
     }
 
+    // ========== Notification Functions ==========
+    function toggleNotifications() {
+      const dropdown = document.getElementById('notificationDropdown');
+      const isHidden = dropdown.classList.contains('hidden');
+
+      if (isHidden) {
+        renderNotifications();
+        dropdown.classList.remove('hidden');
+        // Hide badge when opened
+        document.getElementById('notificationBadge').classList.add('hidden');
+      } else {
+        dropdown.classList.add('hidden');
+      }
+    }
+
+    function closeNotifications() {
+      document.getElementById('notificationDropdown').classList.add('hidden');
+    }
+
+    function renderNotifications() {
+      const container = document.getElementById('notificationList');
+      if (!container || typeof eventsData === 'undefined') return;
+
+      const recentEvents = eventsData.slice(0, 5);
+
+      if (recentEvents.length === 0) {
+        container.innerHTML = '<div class="p-4 text-center text-gray-500">No notifications</div>';
+        return;
+      }
+
+      const typeIcons = {
+        'Check-in': { icon: '→', color: 'text-green-600', bg: 'bg-green-100' },
+        'Check-out': { icon: '←', color: 'text-blue-600', bg: 'bg-blue-100' },
+        'Alert': { icon: '!', color: 'text-red-600', bg: 'bg-red-100' }
+      };
+
+      container.innerHTML = recentEvents.map(event => {
+        const style = typeIcons[event.type] || { icon: '•', color: 'text-gray-600', bg: 'bg-gray-100' };
+        const time = event.time.split(' ')[1].substring(0, 5);
+
+        return `
+          <div class="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50" onclick="openVideo('${event.id}'); closeNotifications();">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                <img src="${event.avatar}" class="w-full h-full object-cover" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23ccc%22><circle cx=%2212%22 cy=%228%22 r=%224%22/><path d=%22M12 14c-4 0-8 2-8 4v2h16v-2c0-2-4-4-8-4z%22/></svg>'">
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-800 truncate">${event.person} - ${event.type}</p>
+                <p class="text-xs text-gray-500">${event.cameraName} • ${time}</p>
+              </div>
+              <span class="w-6 h-6 rounded-full ${style.bg} ${style.color} flex items-center justify-center text-xs font-bold flex-shrink-0">
+                ${style.icon}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Close notifications when clicking outside
+    document.addEventListener('click', function(e) {
+      const dropdown = document.getElementById('notificationDropdown');
+      const button = e.target.closest('button[onclick="toggleNotifications()"]');
+      const isDropdown = e.target.closest('#notificationDropdown');
+
+      if (!button && !isDropdown && dropdown && !dropdown.classList.contains('hidden')) {
+        dropdown.classList.add('hidden');
+      }
+    });
+
     // Alert audio reference
     let alertAudio = null;
 
@@ -1024,6 +1267,16 @@
         alertAudio.pause();
         alertAudio.currentTime = 0;
       }
+    }
+
+    // View alert recording - switch to Event Log and play video
+    function viewAlertRecording() {
+      closeAlert();
+      switchTab('events');
+      // Small delay to ensure page switch completes, then open video
+      setTimeout(() => {
+        openVideo('event_003'); // Alert event video (demo_danger_ori.mp4)
+      }, 100);
     }
 
 
@@ -1207,6 +1460,80 @@
 
       modal.classList.add('hidden');
       modal.classList.remove('flex');
+    }
+
+    // ========== Special Mode Functions ==========
+    let startPicker = null;
+    let endPicker = null;
+
+    function openSpecialModeModal() {
+      const modal = document.getElementById('specialModeModal');
+      // Reset form
+      document.getElementById('specialModeName').value = '';
+      document.getElementById('specialModeClass').value = '';
+
+      // Initialize Flatpickr with Chinese locale and YY/MM/DD HH:MM format
+      const fpConfig = {
+        locale: 'zh_tw',
+        enableTime: true,
+        time_24hr: true,
+        dateFormat: 'y/m/d H:i',
+        allowInput: false
+      };
+
+      // Destroy existing pickers
+      if (startPicker) startPicker.destroy();
+      if (endPicker) endPicker.destroy();
+
+      startPicker = flatpickr('#specialModeStart', fpConfig);
+      endPicker = flatpickr('#specialModeEnd', fpConfig);
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeSpecialModeModal() {
+      const modal = document.getElementById('specialModeModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      // Clear picker values
+      if (startPicker) startPicker.clear();
+      if (endPicker) endPicker.clear();
+    }
+
+    function addSpecialMode() {
+      const name = document.getElementById('specialModeName').value.trim();
+      const classVal = document.getElementById('specialModeClass').value;
+      const startStr = document.getElementById('specialModeStart').value;
+      const endStr = document.getElementById('specialModeEnd').value;
+
+      if (!name || !classVal || !startStr || !endStr) {
+        alert('Please fill in all fields');
+        return;
+      }
+
+      const list = document.getElementById('specialModeList');
+      const newItem = document.createElement('div');
+      newItem.className = 'bg-blue-50 rounded-xl p-4 relative group';
+      newItem.innerHTML = `
+        <button onclick="this.parentElement.remove()" class="absolute top-2 right-2 text-blue-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+        <div class="flex items-center gap-2 mb-2">
+          <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          <span class="font-medium text-blue-800">${name}</span>
+        </div>
+        <p class="text-sm text-blue-600">${classVal}</p>
+        <p class="text-sm text-blue-600">${startStr} ~ ${endStr}</p>
+        <p class="text-xs text-blue-400 mt-1">Exit alerts suspended</p>
+      `;
+
+      list.appendChild(newItem);
+      closeSpecialModeModal();
     }
 
     // Download video
@@ -1453,11 +1780,83 @@
     // ========== Children Data Model ==========
     // Photo path format: photos/name_class_studentId/name_class_studentId_front.jpg
     // missingPhotos: list of missing photo angles
-    const childrenData = [
+    let childrenData = [
       { id: 1, name: 'Wei', folder: 'wei_classA_000012', class: 'Class A', studentId: '000012', status: 'active', faceUpdate: 5, missingPhotos: [] },
       { id: 2, name: 'Wen', folder: 'wen_classB_00008', class: 'Class B', studentId: '00008', status: 'needUpdate', faceUpdate: 95, missingPhotos: [] },
       { id: 3, name: 'Tu', folder: 'tu_classC_000019', class: 'Class C', studentId: '000019', status: 'incomplete', faceUpdate: 2, missingPhotos: ['down'] },
     ];
+
+    // ========== Add Child Functions ==========
+    function openAddChildModal() {
+      const modal = document.getElementById('addChildModal');
+      // Reset form
+      document.getElementById('newChildName').value = '';
+      document.getElementById('newChildClass').value = '';
+      document.getElementById('newChildId').value = '';
+
+      // Show placeholder images (using existing Wei photos as demo)
+      const angles = ['Front', 'Left', 'Right', 'Up', 'Down'];
+      const angleMap = { 'Front': 'front', 'Left': 'left', 'Right': 'right', 'Up': 'up', 'Down': 'down' };
+
+      angles.forEach(angle => {
+        const img = document.getElementById('photo' + angle);
+        const placeholder = document.getElementById('placeholder' + angle);
+        // Use Wei's photos as demo placeholders
+        img.src = `photos/wei_classA_000012/wei_classA_000012_${angleMap[angle]}.jpg`;
+        img.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+      });
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeAddChildModal() {
+      const modal = document.getElementById('addChildModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function addNewChild() {
+      const name = document.getElementById('newChildName').value.trim();
+      const classVal = document.getElementById('newChildClass').value;
+      const studentId = document.getElementById('newChildId').value.trim();
+
+      if (!name || !classVal || !studentId) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      // Create folder name format: name_class_studentId
+      const classShort = classVal.replace('Class ', 'class');
+      const folder = `${name.toLowerCase()}_${classShort}_${studentId}`;
+
+      // Generate new ID
+      const newId = Math.max(...childrenData.map(c => c.id)) + 1;
+
+      // Add new child to data
+      const newChild = {
+        id: newId,
+        name: name,
+        folder: folder,
+        class: classVal,
+        studentId: studentId,
+        status: 'active',
+        faceUpdate: 0,
+        missingPhotos: []
+      };
+
+      childrenData.push(newChild);
+
+      // Refresh the grid
+      filterChildren();
+
+      // Close modal
+      closeAddChildModal();
+
+      // Show success message
+      alert(`Child "${name}" added successfully!\n\nNote: In production, photos would be saved to:\nphotos/${folder}/`);
+    }
 
     // Filter children
     function filterChildren() {
