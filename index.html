@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KindyGuard - Kindergarten Face Recognition Access System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+
+    /* 自定義動畫 */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.8); opacity: 1; }
+      100% { transform: scale(1.3); opacity: 0; }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes blink {
+      0%, 50%, 100% { opacity: 1; }
+      25%, 75% { opacity: 0.3; }
+    }
+    @keyframes scan {
+      0% { top: 0; }
+      50% { top: calc(100% - 4px); }
+      100% { top: 0; }
+    }
+
+    .pulse-ring::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid currentColor;
+      animation: pulse-ring 1.5s ease-out infinite;
+    }
+    .float { animation: float 3s ease-in-out infinite; }
+    .slide-in { animation: slideIn 0.5s ease-out; }
+    .fade-in { animation: fadeIn 0.6s ease-out; }
+    .blink { animation: blink 1s infinite; }
+
+    /* 攝影機掃描線 */
+    .scan-line {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, transparent, #22c55e, transparent);
+      animation: scan 2s linear infinite;
+    }
+
+    /* 人臉辨識框 */
+    .face-box {
+      border: 3px solid #22c55e;
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+    }
+    .face-box.unknown {
+      border-color: #eab308;
+      box-shadow: 0 0 20px rgba(234, 179, 8, 0.5);
+    }
+    .face-box.alert {
+      border-color: #ef4444;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+      animation: blink 0.5s infinite;
+    }
+
+    /* 側邊欄 */
+    .sidebar {
+      background: linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%);
+    }
+
+    /* 卡片效果 */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    /* 狀態指示燈 */
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      position: relative;
+    }
+    .status-dot.online::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px solid #22c55e;
+      animation: pulse-ring 2s ease-out infinite;
+    }
+
+    /* 警報 Modal */
+    .alert-modal {
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    }
+
+    /* 頁籤樣式 */
+    .tab-btn.active {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: white;
+    }
+
+    /* 隱藏 scrollbar */
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* 影片播放器 */
+    .video-player {
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .video-controls {
+      background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- 警報 Modal (預設隱藏) -->
+  <div id="alertModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70">
+    <div class="alert-modal text-white rounded-2xl p-8 max-w-lg mx-4 fade-in shadow-2xl">
+      <div class="flex items-center gap-4 mb-6">
+        <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+          <svg class="w-10 h-10 blink" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold">ALERT: Unauthorized Exit Detected!</h2>
+          <p class="text-red-200">High Alert - Perimeter Breach</p>
+        </div>
+      </div>
+
+      <div class="bg-white/10 rounded-xl p-5 mb-6 space-y-3">
+        <div class="flex items-center gap-3">
+          <img src="photos/wen_classB_00008/wen_classB_00008_front.jpg" class="w-16 h-16 rounded-full border-4 border-white/30 object-cover">
+          <div>
+            <p class="text-xl font-bold">Wen</p>
+            <p class="text-red-200">Class B</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4 mt-4">
+          <div>
+            <p class="text-red-200 text-sm">Detection Location</p>
+            <p class="font-semibold">Perimeter</p>
+          </div>
+          <div>
+            <p class="text-red-200 text-sm">Detection Time</p>
+            <p class="font-semibold" id="alertTime">09:20:00</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <button onclick="closeAlert()" class="flex-1 bg-white text-red-600 font-bold py-3 px-6 rounded-xl hover:bg-gray-100 transition flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m2.828-9.9a9 9 0 0112.728 0"/>
+          </svg>
+          Dismiss Alert
+        </button>
+        <button onclick="closeAlert(); switchTab('playback')" class="flex-1 bg-white/20 text-white font-bold py-3 px-6 rounded-xl hover:bg-white/30 transition flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+          </svg>
+          View Recording
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Child Photo Modal -->
+  <div id="childPhotoModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70">
+    <div class="bg-white rounded-2xl max-w-4xl w-full mx-4 overflow-hidden fade-in">
+      <div class="flex items-center justify-between p-4 border-b">
+        <div>
+          <h3 class="text-gray-800 font-bold text-lg" id="childPhotoTitle">Child Registration Photos</h3>
+          <p class="text-gray-500 text-sm" id="childPhotoSubtitle">Class A | ID: 000012</p>
+        </div>
+        <button onclick="closeChildPhoto()" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="p-6">
+        <div id="childPhotoGrid" class="grid grid-cols-5 gap-4">
+          <!-- Dynamically generated 5 photos -->
+        </div>
+        <div class="mt-6 flex justify-between items-center">
+          <p class="text-sm text-gray-500">
+            <span id="childPhotoUpdateInfo">Face data updated 5 days ago</span>
+          </p>
+          <div class="flex gap-3">
+            <button onclick="closeChildPhoto()" class="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50">
+              Close
+            </button>
+            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              Re-register
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video Playback Modal -->
+  <div id="videoModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80">
+    <div class="bg-gray-900 rounded-2xl max-w-4xl w-full mx-4 overflow-hidden fade-in">
+      <div class="flex items-center justify-between p-4 border-b border-gray-700">
+        <div>
+          <h3 class="text-white font-bold" id="videoTitle">Video Playback</h3>
+          <p class="text-gray-400 text-sm" id="videoSubtitle">CAM-01 Entrance | 2025/01/15 09:15:25 - 09:15:35</p>
+        </div>
+        <button onclick="closeVideo()" class="text-gray-400 hover:text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="video-player aspect-video relative bg-black">
+        <!-- Video Player -->
+        <video id="eventVideo" class="w-full h-full" controls>
+          <source id="videoSource" src="" type="video/mp4">
+          Your browser does not support video playback
+        </video>
+        <!-- Placeholder when no video -->
+        <div id="videoPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
+          <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+          </svg>
+          <p>Please place MP4 videos in the <code class="bg-gray-800 px-2 py-1 rounded">videos/</code> folder</p>
+          <p class="text-sm mt-2">Currently loading: <span id="currentVideoPath" class="text-blue-400">None</span></p>
+        </div>
+      </div>
+      <div class="p-4 bg-gray-800 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <button onclick="downloadVideo()" class="text-gray-400 hover:text-white flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Download Clip
+          </button>
+          <button onclick="captureScreenshot()" class="text-gray-400 hover:text-white flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            Capture Screenshot
+          </button>
+        </div>
+        <div class="text-gray-400 text-sm flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
+          </svg>
+          Source: Local Video
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 主容器 -->
+  <div class="flex h-screen">
+
+    <!-- 側邊欄 -->
+    <aside class="sidebar w-64 text-white flex flex-col flex-shrink-0">
+      <!-- Logo -->
+      <div class="p-6 border-b border-white/10">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-xl flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="font-bold text-lg">KindyGuard</h1>
+            <p class="text-xs text-gray-400">Child Safety Protection System</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Menu -->
+      <nav class="flex-1 p-4 space-y-2">
+        <a href="#" onclick="switchTab('dashboard')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+          </svg>
+          Live Monitoring
+        </a>
+        <a href="#" onclick="switchTab('attendance')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-white/5 hover:text-white transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+          </svg>
+          Attendance
+        </a>
+        <a href="#" onclick="switchTab('children')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-white/5 hover:text-white transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+          Children
+        </a>
+        <a href="#" onclick="switchTab('events')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-white/5 hover:text-white transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          Event Log
+        </a>
+        <a href="#" onclick="switchTab('settings')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-white/5 hover:text-white transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          Settings
+        </a>
+      </nav>
+
+      <!-- System Status -->
+      <div class="p-4 border-t border-white/10">
+        <div class="bg-white/5 rounded-xl p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="status-dot online bg-green-500"></div>
+            <span class="text-sm text-gray-300">System Running</span>
+          </div>
+          <div class="text-xs text-gray-400 space-y-1">
+            <p>Cameras: <span class="text-green-400">2/2 Online</span></p>
+            <p>NAS Storage: <span class="text-green-400">Connected</span></p>
+            <p>AI Engine: <span class="text-green-400">Normal</span></p>
+            <p>Last Sync: <span id="lastSync">Just now</span></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Info -->
+      <div class="p-4 border-t border-white/10">
+        <div class="flex items-center gap-3">
+          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=admin&backgroundColor=c0aede" class="w-10 h-10 rounded-full">
+          <div class="flex-1">
+            <p class="font-medium text-sm">Teacher Lee</p>
+            <p class="text-xs text-gray-400">Administrator</p>
+          </div>
+          <button class="text-gray-400 hover:text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-auto">
+
+      <!-- Top Navigation -->
+      <header class="bg-white shadow-sm px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+        <div>
+          <h2 class="text-xl font-bold text-gray-800" id="pageTitle">Live Monitoring Center</h2>
+          <p class="text-sm text-gray-500" id="currentTime">2025/01/15 09:15:30</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <!-- NAS Status -->
+          <div class="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg">
+            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/>
+            </svg>
+            <span class="text-sm text-green-700">NAS Recording</span>
+          </div>
+          <!-- Alert Test Button -->
+          <button onclick="triggerAlert()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-lg shadow-red-500/30">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            Simulate Alert
+          </button>
+          <!-- 通知 -->
+          <button class="relative p-2 text-gray-500 hover:text-gray-700">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Dashboard Page -->
+      <div id="page-dashboard" class="p-6 space-y-6">
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="glass-card rounded-2xl p-5 fade-in">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-500 text-sm">Expected Today</p>
+                <p class="text-3xl font-bold text-gray-800">3</p>
+              </div>
+              <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-card rounded-2xl p-5 fade-in" style="animation-delay: 0.1s">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-500 text-sm">Checked In</p>
+                <p class="text-3xl font-bold text-green-600">2</p>
+              </div>
+              <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+            </div>
+            <div class="mt-3">
+              <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-yellow-500 h-2 rounded-full" style="width: 66%"></div>
+              </div>
+              <p class="text-xs text-gray-400 mt-1">Attendance Rate 66%</p>
+            </div>
+          </div>
+
+          <div class="glass-card rounded-2xl p-5 fade-in" style="animation-delay: 0.2s">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-500 text-sm">Checked Out</p>
+                <p class="text-3xl font-bold text-orange-600">1</p>
+              </div>
+              <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-card rounded-2xl p-5 fade-in" style="animation-delay: 0.3s">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-gray-500 text-sm">Alerts Today</p>
+                <p class="text-3xl font-bold text-red-600">1</p>
+              </div>
+              <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          <!-- Camera Monitoring Area -->
+          <div class="lg:col-span-2 space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="font-bold text-gray-800">Live Monitoring</h3>
+              <div class="flex items-center gap-3">
+                <span class="text-sm text-gray-500 flex items-center gap-1">
+                  <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="6"/>
+                  </svg>
+                  RTSP Streaming
+                </span>
+                <div class="flex gap-2">
+                  <button class="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded-lg">1x2</button>
+                  <button class="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200">2x2</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Camera 1 - Entrance -->
+              <div class="glass-card rounded-2xl overflow-hidden">
+                <div class="relative bg-gray-900 aspect-video">
+                  <video id="liveVideo1" class="w-full h-full object-cover" autoplay loop muted playsinline>
+                    <source src="videos/cam00_live.mp4" type="video/mp4">
+                  </video>
+                  <div class="absolute top-3 left-3 bg-black/50 text-white text-xs px-2 py-1 rounded flex items-center gap-2">
+                    <span class="w-2 h-2 bg-red-500 rounded-full blink"></span>
+                    <span id="cam1Label">CAM-01 Entrance</span>
+                  </div>
+                  <div class="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded" id="cam1Time">
+                    09:15:30
+                  </div>
+                  <!-- NAS Recording Indicator -->
+                  <div class="absolute bottom-3 right-3 bg-blue-500/80 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="6"/>
+                    </svg>
+                    NAS Recording
+                  </div>
+                </div>
+              </div>
+
+              <!-- Camera 2 - Perimeter/Playground -->
+              <div class="glass-card rounded-2xl overflow-hidden">
+                <div class="relative bg-gray-900 aspect-video">
+                  <video id="liveVideo2" class="w-full h-full object-cover" autoplay loop muted playsinline>
+                    <source src="videos/cam02_live.mp4" type="video/mp4">
+                  </video>
+                  <div class="absolute top-3 left-3 bg-black/50 text-white text-xs px-2 py-1 rounded flex items-center gap-2">
+                    <span class="w-2 h-2 bg-red-500 rounded-full blink"></span>
+                    <span id="cam2Label">CAM-02 Perimeter/Playground</span>
+                  </div>
+                  <div class="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded" id="cam2Time">
+                    09:15:30
+                  </div>
+                  <div class="absolute bottom-3 right-3 bg-blue-500/80 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="6"/>
+                    </svg>
+                    NAS Recording
+                  </div>
+                </div>
+              </div>
+
+              <!-- Camera 3 - Exit -->
+              <div class="glass-card rounded-2xl overflow-hidden">
+                <div class="relative bg-gray-900 aspect-video">
+                  <video id="liveVideo3" class="w-full h-full object-cover" autoplay loop muted playsinline>
+                    <source src="videos/cam03_live.mp4" type="video/mp4">
+                  </video>
+                  <div class="absolute top-3 left-3 bg-black/50 text-white text-xs px-2 py-1 rounded flex items-center gap-2">
+                    <span class="w-2 h-2 bg-red-500 rounded-full blink"></span>
+                    <span id="cam3Label">CAM-03 Exit</span>
+                  </div>
+                  <div class="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded" id="cam3Time">
+                    09:15:30
+                  </div>
+                  <div class="absolute bottom-3 right-3 bg-blue-500/80 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="6"/>
+                    </svg>
+                    NAS Recording
+                  </div>
+                </div>
+              </div>
+
+              <!-- Camera 4 - Unconfigured -->
+              <div class="glass-card rounded-2xl overflow-hidden">
+                <div class="relative bg-gray-800 aspect-video flex items-center justify-center">
+                  <div class="text-center text-gray-500">
+                    <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                    <p class="text-sm">IPCAM Not Configured</p>
+                  </div>
+                  <div class="absolute top-3 left-3 bg-black/50 text-white text-xs px-2 py-1 rounded flex items-center gap-2">
+                    <span class="w-2 h-2 bg-gray-500 rounded-full"></span>
+                    <span>CAM-04 Not Configured</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Panel -->
+          <div class="space-y-4">
+            <!-- Latest Events -->
+            <div class="glass-card rounded-2xl p-5">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-gray-800">Latest Events</h3>
+                <a href="#" onclick="switchTab('events')" class="text-blue-600 text-sm hover:underline">View All</a>
+              </div>
+
+              <div id="latestEventsContainer" class="space-y-3 max-h-64 overflow-y-auto hide-scrollbar">
+                <!-- Dynamically rendered -->
+              </div>
+
+              <p class="text-xs text-gray-400 mt-3 text-center">Click event to view NAS recording playback</p>
+            </div>
+
+            <!-- Override Mode -->
+            <div class="glass-card rounded-2xl p-5">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-gray-800">Special Mode (Override)</h3>
+                <button class="text-blue-600 text-sm hover:underline">+ Add</button>
+              </div>
+
+              <div class="bg-blue-50 rounded-xl p-4">
+                <div class="flex items-center gap-2 mb-2">
+                  <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                  <span class="font-medium text-blue-800">Field Trip</span>
+                </div>
+                <p class="text-sm text-blue-600">Class B · 10:00-14:00</p>
+                <p class="text-xs text-blue-400 mt-1">15 children · Exit alerts suspended</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event Log Page -->
+      <div id="page-events" class="p-6 hidden">
+        <div class="glass-card rounded-2xl p-6">
+          <h3 class="font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            Event Log
+          </h3>
+
+          <!-- Search Filters -->
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">Child Name/ID</label>
+              <input type="text" id="eventFilterName" placeholder="Enter name..." class="w-full border rounded-lg px-3 py-2" value="">
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">Event Type</label>
+              <select id="eventFilterType" class="w-full border rounded-lg px-3 py-2">
+                <option value="">All Types</option>
+                <option value="進入">Entry</option>
+                <option value="離開">Exit</option>
+                <option value="警報">Alert</option>
+                <option value="簽到">Check-in</option>
+                <option value="簽退">Check-out</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">Start Time</label>
+              <input type="datetime-local" id="eventFilterStart" class="w-full border rounded-lg px-3 py-2" value="2025-01-15T08:00">
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">End Time</label>
+              <input type="datetime-local" id="eventFilterEnd" class="w-full border rounded-lg px-3 py-2" value="2025-01-15T18:00">
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">Camera</label>
+              <select id="eventFilterCamera" class="w-full border rounded-lg px-3 py-2">
+                <option value="">All Cameras</option>
+                <option value="CAM-01">CAM-01 Entrance</option>
+                <option value="CAM-02">CAM-02 Perimeter</option>
+                <option value="CAM-03">CAM-03 Exit</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center mb-6">
+            <div id="eventFilterResult" class="text-sm text-gray-500"></div>
+            <div class="flex gap-3">
+              <button onclick="resetEventFilter()" class="border border-gray-400 text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-lg flex items-center gap-2 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Reset
+              </button>
+              <button onclick="exportCSV()" class="border border-green-600 text-green-600 hover:bg-green-50 px-4 py-2 rounded-lg flex items-center gap-2 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Export CSV
+              </button>
+              <button onclick="filterEvents()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                Search Events
+              </button>
+            </div>
+          </div>
+
+          <!-- Search Results -->
+          <div class="border rounded-xl overflow-hidden">
+            <table class="w-full" id="eventsTable">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="text-left px-4 py-3 text-sm text-gray-600">Time</th>
+                  <th class="text-left px-4 py-3 text-sm text-gray-600">Person</th>
+                  <th class="text-left px-4 py-3 text-sm text-gray-600">Event Type</th>
+                  <th class="text-left px-4 py-3 text-sm text-gray-600">Camera</th>
+                  <th class="text-left px-4 py-3 text-sm text-gray-600">NAS Path</th>
+                  <th class="text-left px-4 py-3 text-sm text-gray-600">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="eventsTableBody" class="divide-y">
+                <!-- Dynamically generated -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- No Data Message -->
+          <div id="eventsNoData" class="hidden text-center py-12 text-gray-500">
+            <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            <p>No events matching the criteria</p>
+          </div>
+
+          <!-- Info -->
+          <div class="mt-6 p-4 bg-blue-50 rounded-xl">
+            <h4 class="font-medium text-blue-800 mb-2 flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Video Playback Process
+            </h4>
+            <ol class="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+              <li>System requests NAS based on EventLogs video_path_on_nas and timestamp</li>
+              <li>NAS streams video clip <strong>±5 seconds</strong> around the timestamp</li>
+              <li>Frontend player plays directly without downloading the full file</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <!-- Attendance Management Page -->
+      <div id="page-attendance" class="p-6 hidden">
+        <div class="glass-card rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-4">
+              <input type="date" id="attendanceFilterDate" value="2025-01-15" class="border rounded-lg px-4 py-2" onchange="filterAttendance()">
+              <select id="attendanceFilterClass" class="border rounded-lg px-4 py-2" onchange="filterAttendance()">
+                <option value="">All Classes</option>
+                <option value="Class A">Class A</option>
+                <option value="Class B">Class B</option>
+                <option value="Class C">Class C</option>
+              </select>
+            </div>
+            <div id="attendanceStats" class="flex gap-2">
+              <span class="px-3 py-1 bg-green-100 text-green-600 rounded-full text-sm">Present: 45</span>
+              <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">Absent: 5</span>
+              <span class="px-3 py-1 bg-orange-100 text-orange-600 rounded-full text-sm">Left: 3</span>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="text-left px-4 py-3 text-sm text-gray-600">Photo</th>
+                  <th class="text-left px-4 py-3 text-sm text-gray-600">Name</th>
+                  <th class="text-left px-4 py-3 text-sm text-gray-600">Class</th>
+                  <th class="text-left px-4 py-3 text-sm text-gray-600">Check-in Time</th>
+                  <th class="text-left px-4 py-3 text-sm text-gray-600">Check-out Time</th>
+                  <th class="text-left px-4 py-3 text-sm text-gray-600">Status</th>
+                  <th class="text-left px-4 py-3 text-sm text-gray-600">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTableBody" class="divide-y">
+                <!-- Dynamically generated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Children Management Page -->
+      <div id="page-children" class="p-6 hidden">
+        <div class="glass-card rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-4">
+              <div class="relative">
+                <input type="text" id="childrenFilterName" placeholder="Search name..." class="border rounded-lg pl-10 pr-4 py-2 w-64" oninput="filterChildren()">
+                <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+              </div>
+              <select id="childrenFilterClass" class="border rounded-lg px-4 py-2" onchange="filterChildren()">
+                <option value="">All Classes</option>
+                <option value="Class A">Class A</option>
+                <option value="Class B">Class B</option>
+                <option value="Class C">Class C</option>
+              </select>
+            </div>
+            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              Add Child
+            </button>
+          </div>
+
+          <div id="childrenGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <!-- Dynamically generated -->
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Settings Page -->
+      <div id="page-settings" class="p-6 hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Camera Settings -->
+          <div class="glass-card rounded-2xl p-6">
+            <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              </svg>
+              Camera Settings
+            </h3>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                <div class="flex items-center gap-3">
+                  <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <div>
+                    <p class="font-medium">CAM-01 Entrance</p>
+                    <p class="text-sm text-gray-400">rtsp://192.168.1.101:554/stream</p>
+                  </div>
+                </div>
+                <button class="text-blue-600 text-sm">Edit</button>
+              </div>
+              <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                <div class="flex items-center gap-3">
+                  <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <div>
+                    <p class="font-medium">CAM-02 Perimeter/Playground</p>
+                    <p class="text-sm text-gray-400">rtsp://192.168.1.102:554/stream</p>
+                  </div>
+                </div>
+                <button class="text-blue-600 text-sm">Edit</button>
+              </div>
+              <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                <div class="flex items-center gap-3">
+                  <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <div>
+                    <p class="font-medium">CAM-03 Exit</p>
+                    <p class="text-sm text-gray-400">rtsp://192.168.1.103:554/stream</p>
+                  </div>
+                </div>
+                <button class="text-blue-600 text-sm">Edit</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- NAS Settings -->
+          <div class="glass-card rounded-2xl p-6">
+            <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/>
+              </svg>
+              Synology NAS Settings
+            </h3>
+            <div class="space-y-4">
+              <div class="flex justify-between py-2 border-b">
+                <span class="text-gray-500">Connection Status</span>
+                <span class="font-medium text-green-600 flex items-center gap-1">
+                  <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                  Connected
+                </span>
+              </div>
+              <div class="flex justify-between py-2 border-b">
+                <span class="text-gray-500">NAS Address</span>
+                <span class="font-medium">192.168.1.200</span>
+              </div>
+              <div class="flex justify-between py-2 border-b">
+                <span class="text-gray-500">Recording Path</span>
+                <span class="font-medium text-sm font-mono">/surveillance/</span>
+              </div>
+              <div class="flex justify-between py-2 border-b">
+                <span class="text-gray-500">Storage Space</span>
+                <span class="font-medium">1.2 TB / 4 TB</span>
+              </div>
+              <div class="flex justify-between py-2">
+                <span class="text-gray-500">Retention Days</span>
+                <span class="font-medium">90 days</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alert Settings -->
+          <div class="glass-card rounded-2xl p-6">
+            <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+              </svg>
+              Alert Settings
+            </h3>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="font-medium">Loud Alert Sound</p>
+                  <p class="text-sm text-gray-400">Play on-site for high-risk alerts</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="font-medium">WebSocket Push</p>
+                  <p class="text-sm text-gray-400">Real-time push to all devices</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Info -->
+          <div class="glass-card rounded-2xl p-6">
+            <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              System Info
+            </h3>
+            <div class="space-y-3">
+              <div class="flex justify-between py-2 border-b">
+                <span class="text-gray-500">System Version</span>
+                <span class="font-medium">v1.0.0</span>
+              </div>
+              <div class="flex justify-between py-2 border-b">
+                <span class="text-gray-500">AI Engine</span>
+                <span class="font-medium">InsightFace 0.7</span>
+              </div>
+              <div class="flex justify-between py-2 border-b">
+                <span class="text-gray-500">Database</span>
+                <span class="font-medium">PostgreSQL 15</span>
+              </div>
+              <div class="flex justify-between py-2">
+                <span class="text-gray-500">Server</span>
+                <span class="font-medium">Mac Mini (Apple Silicon)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    // Update time
+    function updateTime() {
+      const now = new Date();
+      const timeStr = now.toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      document.getElementById('currentTime').textContent = timeStr;
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
+
+    // Page switching
+    function switchTab(tabName) {
+      // Hide all pages
+      document.querySelectorAll('[id^="page-"]').forEach(page => {
+        page.classList.add('hidden');
+      });
+
+      // Show target page
+      document.getElementById('page-' + tabName).classList.remove('hidden');
+
+      // Update navigation styles
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('bg-white/10', 'text-white');
+        link.classList.add('text-gray-300');
+      });
+      if(event && event.target) {
+        const navLink = event.target.closest('.nav-link');
+        if(navLink) {
+          navLink.classList.add('bg-white/10', 'text-white');
+          navLink.classList.remove('text-gray-300');
+        }
+      }
+
+      // Update page title
+      const titles = {
+        'dashboard': 'Live Monitoring Center',
+        'attendance': 'Attendance Management',
+        'children': 'Children Management',
+        'events': 'Event Log',
+        'settings': 'System Settings'
+      };
+      document.getElementById('pageTitle').textContent = titles[tabName] || 'Live Monitoring Center';
+    }
+
+    // Trigger alert
+    function triggerAlert() {
+      const modal = document.getElementById('alertModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      const now = new Date();
+      document.getElementById('alertTime').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+
+      try {
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQgHVqjI3LV2CQdBo8/NtWIRDVOr2sORBwI6pt7WkBQCIJTs6J8ZECCu4/ajFAIYse/2rSkFEbrz/LoiExrC8/rGJxEVzfj66CAJGtH7/e0qFxzQ+f37MQ8b1Pv9+jQXJN36//40GCTd+//+MhsX4f3/+zQQGOb9//s2Dx/n/f/6Nw8f5/3/+jYPH+f9//o2Dx/n/f/6Ng==');
+        audio.play().catch(() => {});
+      } catch(e) {}
+    }
+
+    // Close alert
+    function closeAlert() {
+      const modal = document.getElementById('alertModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // ========== Live Monitoring Video Config ==========
+    // Configure live monitoring video sources here
+    const liveVideoConfig = {
+      cam1: {
+        src: 'videos/cam00_live.mp4',
+        label: 'CAM-01 Entrance'
+      },
+      cam2: {
+        src: 'videos/cam02_live.mp4',
+        label: 'CAM-02 Perimeter/Playground'
+      },
+      cam3: {
+        src: 'videos/cam03_live.mp4',
+        label: 'CAM-03 Exit'
+      }
+    };
+
+    // Update live monitoring video
+    function updateLiveVideo(camId, videoPath, label) {
+      const videoIdMap = { cam1: 'liveVideo1', cam2: 'liveVideo2', cam3: 'liveVideo3' };
+      const labelIdMap = { cam1: 'cam1Label', cam2: 'cam2Label', cam3: 'cam3Label' };
+
+      const video = document.getElementById(videoIdMap[camId]);
+      const labelEl = document.getElementById(labelIdMap[camId]);
+
+      if (video && videoPath) {
+        video.src = videoPath;
+        video.load();
+        video.play();
+      }
+      if (labelEl && label) {
+        labelEl.textContent = label;
+      }
+    }
+
+    // Initialize live monitoring videos
+    function initLiveVideos() {
+      updateLiveVideo('cam1', liveVideoConfig.cam1.src, liveVideoConfig.cam1.label);
+      updateLiveVideo('cam2', liveVideoConfig.cam2.src, liveVideoConfig.cam2.label);
+      updateLiveVideo('cam3', liveVideoConfig.cam3.src, liveVideoConfig.cam3.label);
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      initLiveVideos();
+      renderLatestEvents();
+    });
+
+    // ========== Latest Events Rendering ==========
+    // Event type to style mapping
+    const latestEventStyles = {
+      'Check-in': { bg: 'bg-green-50', hover: 'hover:bg-green-100', dot: 'bg-green-500' },
+      'Check-out': { bg: 'bg-orange-50', hover: 'hover:bg-orange-100', dot: 'bg-orange-500' },
+      'Entry': { bg: 'bg-blue-50', hover: 'hover:bg-blue-100', dot: 'bg-blue-500' },
+      'Exit': { bg: 'bg-purple-50', hover: 'hover:bg-purple-100', dot: 'bg-purple-500' },
+      'Alert': { bg: 'bg-red-50', hover: 'hover:bg-red-100', dot: 'bg-red-500' }
+    };
+
+    // Render latest events (show first 5)
+    function renderLatestEvents() {
+      const container = document.getElementById('latestEventsContainer');
+      if (!container) return;
+
+      const latestEvents = eventsData.slice(0, 5);
+
+      container.innerHTML = latestEvents.map((event, index) => {
+        const style = latestEventStyles[event.type] || { bg: 'bg-gray-50', hover: 'hover:bg-gray-100', dot: 'bg-gray-500' };
+        const time = event.time.split(' ')[1].substring(0, 5); // 取得 HH:MM
+        const avatarHtml = event.avatar
+          ? `<img src="${event.avatar}" class="w-10 h-10 rounded-full object-cover">`
+          : `<div class="w-10 h-10 rounded-full bg-yellow-200 flex items-center justify-center"><span class="text-yellow-600 text-lg">?</span></div>`;
+
+        return `
+          <div class="flex items-center gap-3 p-3 ${style.bg} rounded-xl slide-in cursor-pointer ${style.hover}"
+               style="animation-delay: ${index * 0.1}s" onclick="openVideo('${event.id}')">
+            ${avatarHtml}
+            <div class="flex-1">
+              <p class="font-medium text-sm">${event.person}</p>
+              <p class="text-xs text-gray-500">${event.class}・${event.type}・${event.cameraName}</p>
+            </div>
+            <div class="text-right">
+              <span class="inline-block w-2 h-2 ${style.dot} rounded-full"></span>
+              <p class="text-xs text-gray-400">${time}</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ========== Event Video Mapping ==========
+    // Configure video file for each event here
+    const videoMapping = {
+      'event_001': {
+        path: 'videos/wen_out_no_detect.mp4',
+        title: 'Check-out Event',
+        subtitle: 'CAM-03 Exit | 2025/01/15 16:46:55 - 16:47:05',
+        person: 'Wen'
+      },
+      'event_002': {
+        path: 'videos/wei_out_no_detect.mp4',
+        title: 'Check-out Event',
+        subtitle: 'CAM-03 Exit | 2025/01/15 16:31:55 - 16:32:05',
+        person: 'Wei'
+      },
+      'event_003': {
+        path: 'videos/demo_danger_ori.mp4',
+        title: 'Alert Event',
+        subtitle: 'CAM-02 Perimeter | 2025/01/15 09:19:55 - 09:20:05',
+        person: 'Wen'
+      },
+      'event_004': {
+        path: 'videos/wen_in.mp4',
+        title: 'Check-in Event',
+        subtitle: 'CAM-01 Entrance | 2025/01/15 08:48:55 - 08:49:05',
+        person: 'Wen'
+      },
+      'event_005': {
+        path: 'videos/wei_in.mp4',
+        title: 'Check-in Event',
+        subtitle: 'CAM-01 Entrance | 2025/01/15 08:44:55 - 08:45:05',
+        person: 'Wei'
+      },
+      // Default/test video
+      'default': {
+        path: 'videos/sample.mp4',
+        title: 'Video Playback',
+        subtitle: 'Test Video',
+        person: 'Test'
+      }
+    };
+
+    let currentVideoPath = '';
+
+    // Open video
+    function openVideo(eventId = 'default') {
+      const modal = document.getElementById('videoModal');
+      const video = document.getElementById('eventVideo');
+      const source = document.getElementById('videoSource');
+      const placeholder = document.getElementById('videoPlaceholder');
+      const pathDisplay = document.getElementById('currentVideoPath');
+
+      // Get video info
+      const videoInfo = videoMapping[eventId] || videoMapping['default'];
+      currentVideoPath = videoInfo.path;
+
+      // Update title
+      document.getElementById('videoTitle').textContent = videoInfo.title;
+      document.getElementById('videoSubtitle').textContent = videoInfo.subtitle;
+
+      // Set video source
+      source.src = videoInfo.path;
+      pathDisplay.textContent = videoInfo.path;
+      video.load();
+
+      // Listen for video load
+      video.onloadeddata = function() {
+        placeholder.classList.add('hidden');
+        video.classList.remove('hidden');
+      };
+
+      video.onerror = function() {
+        placeholder.classList.remove('hidden');
+        video.classList.add('hidden');
+        pathDisplay.textContent = videoInfo.path + ' (File not found)';
+      };
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    // Close video
+    function closeVideo() {
+      const modal = document.getElementById('videoModal');
+      const video = document.getElementById('eventVideo');
+
+      video.pause();
+      video.currentTime = 0;
+
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // Download video
+    function downloadVideo() {
+      if (currentVideoPath) {
+        const link = document.createElement('a');
+        link.href = currentVideoPath;
+        link.download = currentVideoPath.split('/').pop();
+        link.click();
+      } else {
+        alert('No video available for download');
+      }
+    }
+
+    // Capture screenshot
+    function captureScreenshot() {
+      const video = document.getElementById('eventVideo');
+
+      if (video.readyState < 2) {
+        alert('Please load a video first');
+        return;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const link = document.createElement('a');
+      link.download = `screenshot_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Last sync time
+    function updateLastSync() {
+      const times = ['Just now', '1 min ago', '2 min ago', '3 min ago'];
+      let index = 0;
+      setInterval(() => {
+        index = (index + 1) % times.length;
+        document.getElementById('lastSync').textContent = times[index];
+      }, 60000);
+    }
+    updateLastSync();
+
+    // ========== Event Data Model ==========
+    const eventsData = [
+      { id: 'event_001', time: '2025-01-15 16:47:00', person: 'Wen', avatar: 'photos/wen_classB_00008/wen_classB_00008_front.jpg', class: 'Class B', type: 'Check-out', camera: 'CAM-03', cameraName: 'Exit', nasPath: '/surveillance/cam03/2025-01-15_164700.mp4' },
+      { id: 'event_002', time: '2025-01-15 16:32:00', person: 'Wei', avatar: 'photos/wei_classA_000012/wei_classA_000012_front.jpg', class: 'Class A', type: 'Check-out', camera: 'CAM-03', cameraName: 'Exit', nasPath: '/surveillance/cam03/2025-01-15_163200.mp4' },
+      { id: 'event_003', time: '2025-01-15 09:20:00', person: 'Wen', avatar: 'photos/wen_classB_00008/wen_classB_00008_front.jpg', class: 'Class B', type: 'Alert', camera: 'CAM-02', cameraName: 'Perimeter', nasPath: '/surveillance/cam02/2025-01-15_092000.mp4' },
+      { id: 'event_004', time: '2025-01-15 08:49:00', person: 'Wen', avatar: 'photos/wen_classB_00008/wen_classB_00008_front.jpg', class: 'Class B', type: 'Check-in', camera: 'CAM-01', cameraName: 'Entrance', nasPath: '/surveillance/cam01/2025-01-15_084900.mp4' },
+      { id: 'event_005', time: '2025-01-15 08:45:00', person: 'Wei', avatar: 'photos/wei_classA_000012/wei_classA_000012_front.jpg', class: 'Class A', type: 'Check-in', camera: 'CAM-01', cameraName: 'Entrance', nasPath: '/surveillance/cam01/2025-01-15_084500.mp4' },
+    ];
+
+    // Event type colors
+    const eventTypeColors = {
+      'Check-in': { bg: 'bg-green-100', text: 'text-green-600' },
+      'Check-out': { bg: 'bg-orange-100', text: 'text-orange-600' },
+      'Entry': { bg: 'bg-blue-100', text: 'text-blue-600' },
+      'Exit': { bg: 'bg-purple-100', text: 'text-purple-600' },
+      'Alert': { bg: 'bg-red-100', text: 'text-red-600' }
+    };
+
+    // Filter events
+    function filterEvents() {
+      const nameFilter = document.getElementById('eventFilterName').value.toLowerCase();
+      const typeFilter = document.getElementById('eventFilterType').value;
+      const startFilter = document.getElementById('eventFilterStart').value;
+      const endFilter = document.getElementById('eventFilterEnd').value;
+      const cameraFilter = document.getElementById('eventFilterCamera').value;
+
+      const filtered = eventsData.filter(event => {
+        // 姓名篩選
+        if (nameFilter && !event.person.toLowerCase().includes(nameFilter)) return false;
+
+        // 類型篩選
+        if (typeFilter && event.type !== typeFilter) return false;
+
+        // 攝影機篩選
+        if (cameraFilter && event.camera !== cameraFilter) return false;
+
+        // 時間範圍篩選
+        if (startFilter) {
+          const eventTime = new Date(event.time);
+          const startTime = new Date(startFilter);
+          if (eventTime < startTime) return false;
+        }
+        if (endFilter) {
+          const eventTime = new Date(event.time);
+          const endTime = new Date(endFilter);
+          if (eventTime > endTime) return false;
+        }
+
+        return true;
+      });
+
+      renderEventsTable(filtered);
+    }
+
+    // Render events table
+    function renderEventsTable(data) {
+      const tbody = document.getElementById('eventsTableBody');
+      const noData = document.getElementById('eventsNoData');
+      const resultInfo = document.getElementById('eventFilterResult');
+
+      if (data.length === 0) {
+        tbody.innerHTML = '';
+        noData.classList.remove('hidden');
+        resultInfo.textContent = 'Found 0 records';
+        return;
+      }
+
+      noData.classList.add('hidden');
+      resultInfo.textContent = `Found ${data.length} records`;
+
+      tbody.innerHTML = data.map(event => {
+        const colors = eventTypeColors[event.type] || { bg: 'bg-gray-100', text: 'text-gray-600' };
+        const avatarHtml = event.avatar
+          ? `<img src="${event.avatar}" class="w-8 h-8 rounded-full object-cover">`
+          : `<div class="w-8 h-8 rounded-full bg-yellow-200 flex items-center justify-center"><span class="text-yellow-600">?</span></div>`;
+
+        return `
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-sm">${event.time}</td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                ${avatarHtml}
+                <div>
+                  <p class="font-medium text-sm">${event.person}</p>
+                  <p class="text-xs text-gray-400">${event.class}</p>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-1 ${colors.bg} ${colors.text} rounded-full text-xs">${event.type}</span>
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-600">${event.camera} ${event.cameraName}</td>
+            <td class="px-4 py-3 text-xs font-mono text-gray-400">${event.nasPath}</td>
+            <td class="px-4 py-3">
+              <button onclick="openVideo('${event.id}')" class="text-blue-600 hover:underline text-sm flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Play
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Reset event filter
+    function resetEventFilter() {
+      document.getElementById('eventFilterName').value = '';
+      document.getElementById('eventFilterType').value = '';
+      document.getElementById('eventFilterStart').value = '2025-01-15T08:00';
+      document.getElementById('eventFilterEnd').value = '2025-01-15T18:00';
+      document.getElementById('eventFilterCamera').value = '';
+      filterEvents();
+    }
+
+    // Initialize event table on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      filterEvents();
+      filterAttendance();
+      filterChildren();
+    });
+
+    // ========== Attendance Data Model ==========
+    const attendanceData = [
+      { id: 1, name: 'Wei', avatar: 'photos/wei_classA_000012/wei_classA_000012_front.jpg', class: 'Class A', checkIn: '08:45:00', checkOut: '16:32:00', status: 'out' },
+      { id: 2, name: 'Wen', avatar: 'photos/wen_classB_00008/wen_classB_00008_front.jpg', class: 'Class B', checkIn: '08:49:00', checkOut: '16:47:00', status: 'out' },
+      { id: 3, name: 'Tu', avatar: 'photos/tu_classC_000019/tu_classC_000019_front.jpg', class: 'Class C', checkIn: null, checkOut: null, status: 'absent' },
+    ];
+
+    // Filter attendance
+    function filterAttendance() {
+      const dateFilter = document.getElementById('attendanceFilterDate')?.value || '2025-01-15';
+      const classFilter = document.getElementById('attendanceFilterClass')?.value || '';
+
+      const filtered = attendanceData.filter(item => {
+        if (classFilter && item.class !== classFilter) return false;
+        return true;
+      });
+
+      renderAttendanceTable(filtered);
+      updateAttendanceStats(filtered);
+    }
+
+    // Update attendance stats
+    function updateAttendanceStats(data) {
+      const inCount = data.filter(d => d.status === 'in').length;
+      const outCount = data.filter(d => d.status === 'out').length;
+      const absentCount = data.filter(d => d.status === 'absent').length;
+
+      const statsContainer = document.getElementById('attendanceStats');
+      if (statsContainer) {
+        statsContainer.innerHTML = `
+          <span class="px-3 py-1 bg-green-100 text-green-600 rounded-full text-sm">Present: ${inCount}</span>
+          <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">Absent: ${absentCount}</span>
+          <span class="px-3 py-1 bg-orange-100 text-orange-600 rounded-full text-sm">Left: ${outCount}</span>
+        `;
+      }
+    }
+
+    // Render attendance table
+    function renderAttendanceTable(data) {
+      const tbody = document.getElementById('attendanceTableBody');
+      if (!tbody) return;
+
+      tbody.innerHTML = data.map(item => {
+        let statusHtml = '';
+        let rowClass = '';
+
+        if (item.status === 'in') {
+          statusHtml = '<span class="px-2 py-1 bg-green-100 text-green-600 rounded-full text-xs">Present (School Responsibility)</span>';
+        } else if (item.status === 'out') {
+          statusHtml = '<span class="px-2 py-1 bg-orange-100 text-orange-600 rounded-full text-xs">Left (Parent Responsibility)</span>';
+          rowClass = 'bg-orange-50/50';
+        } else {
+          statusHtml = '<span class="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">Absent</span>';
+          rowClass = 'bg-gray-50/50';
+        }
+
+        return `
+          <tr class="hover:bg-gray-50 ${rowClass}">
+            <td class="px-4 py-3"><img src="${item.avatar}" class="w-10 h-10 rounded-full object-cover"></td>
+            <td class="px-4 py-3 font-medium">${item.name}</td>
+            <td class="px-4 py-3 text-gray-500">${item.class}</td>
+            <td class="px-4 py-3 ${item.checkIn ? 'text-green-600' : 'text-gray-400'}">${item.checkIn || '-'}</td>
+            <td class="px-4 py-3 ${item.checkOut ? 'text-orange-600' : 'text-gray-400'}">${item.checkOut || '-'}</td>
+            <td class="px-4 py-3">${statusHtml}</td>
+            <td class="px-4 py-3">
+              ${item.status === 'in' ? '<button class="text-blue-600 text-sm hover:underline">Check-out</button>' : '<span class="text-gray-400 text-sm">-</span>'}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ========== Children Data Model ==========
+    // Photo path format: photos/name_class_studentId/name_class_studentId_front.jpg
+    // missingPhotos: list of missing photo angles
+    const childrenData = [
+      { id: 1, name: 'Wei', folder: 'wei_classA_000012', class: 'Class A', studentId: '000012', status: 'active', faceUpdate: 5, missingPhotos: [] },
+      { id: 2, name: 'Wen', folder: 'wen_classB_00008', class: 'Class B', studentId: '00008', status: 'needUpdate', faceUpdate: 95, missingPhotos: [] },
+      { id: 3, name: 'Tu', folder: 'tu_classC_000019', class: 'Class C', studentId: '000019', status: 'incomplete', faceUpdate: 2, missingPhotos: ['down'] },
+    ];
+
+    // Filter children
+    function filterChildren() {
+      const nameFilter = document.getElementById('childrenFilterName')?.value?.toLowerCase() || '';
+      const classFilter = document.getElementById('childrenFilterClass')?.value || '';
+
+      const filtered = childrenData.filter(item => {
+        if (nameFilter && !item.name.toLowerCase().includes(nameFilter)) return false;
+        if (classFilter && item.class !== classFilter) return false;
+        return true;
+      });
+
+      renderChildrenGrid(filtered);
+    }
+
+    // Render children grid
+    function renderChildrenGrid(data) {
+      const container = document.getElementById('childrenGrid');
+      if (!container) return;
+
+      if (data.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-12 text-gray-500">
+            <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <p>No children matching the criteria</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = data.map(item => {
+        // Use photos folder front.jpg as avatar
+        const avatarUrl = `photos/${item.folder}/${item.folder}_front.jpg`;
+        const isIncomplete = item.status === 'incomplete' || (item.missingPhotos && item.missingPhotos.length > 0);
+        const needUpdate = item.status === 'needUpdate' || item.faceUpdate >= 90;
+
+        // Determine border color and status
+        let borderClass = '';
+        let statusHtml = '';
+        let updateTextClass = 'text-gray-400';
+        let buttonText = 'Edit';
+
+        // Missing photos text
+        const missingText = isIncomplete
+          ? item.missingPhotos.map(p => {
+              const labels = { front: 'Front', left: 'Left', right: 'Right', up: 'Up', down: 'Down' };
+              return labels[p] || p;
+            }).join(', ')
+          : '';
+
+        if (isIncomplete) {
+          borderClass = 'border-red-300 border-2';
+          statusHtml = `<div class="flex items-center gap-2 mt-2"><span class="px-2 py-0.5 bg-red-100 text-red-600 rounded text-xs leading-none">Incomplete Photos</span><span class="text-xs text-red-500 leading-none">Missing: ${missingText}</span></div>`;
+          updateTextClass = 'text-red-600';
+          buttonText = 'Complete';
+        } else if (needUpdate) {
+          borderClass = 'border-yellow-300';
+          statusHtml = '<span class="px-2 py-0.5 bg-yellow-100 text-yellow-600 rounded text-xs mt-2 inline-block">Face Update Needed</span>';
+          updateTextClass = 'text-yellow-600';
+          buttonText = 'Update';
+        } else {
+          statusHtml = '<span class="px-2 py-0.5 bg-green-100 text-green-600 rounded text-xs mt-2 inline-block">Active</span>';
+        }
+
+        return `
+          <div class="border rounded-xl p-4 hover:shadow-lg transition bg-white ${borderClass}">
+            <div class="flex items-start gap-4">
+              <img src="${avatarUrl}" class="w-16 h-16 rounded-full object-cover" onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=${item.name}&backgroundColor=b6e3f4'">
+              <div class="flex-1">
+                <h4 class="font-bold">${item.name}</h4>
+                <p class="text-sm text-gray-500">${item.class}</p>
+                <p class="text-xs text-gray-400">ID: ${item.studentId}</p>
+                <div class="flex items-center flex-wrap">${statusHtml}</div>
+              </div>
+            </div>
+            <div class="mt-4 pt-4 border-t flex items-center justify-between text-sm">
+              <span class="${updateTextClass}">Face Update: ${item.faceUpdate} days ago</span>
+              <button onclick="openChildPhoto(${item.id})" class="text-blue-600 hover:underline">${buttonText}</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Open child photo Modal
+    function openChildPhoto(childId) {
+      const child = childrenData.find(c => c.id === childId);
+      if (!child) return;
+
+      const modal = document.getElementById('childPhotoModal');
+      const title = document.getElementById('childPhotoTitle');
+      const subtitle = document.getElementById('childPhotoSubtitle');
+      const grid = document.getElementById('childPhotoGrid');
+      const updateInfo = document.getElementById('childPhotoUpdateInfo');
+
+      // Set title
+      title.textContent = `${child.name}'s Registration Photos`;
+      subtitle.textContent = `${child.class} | ID: ${child.studentId}`;
+      updateInfo.textContent = `Face data updated ${child.faceUpdate} days ago`;
+
+      // Photo angle list
+      const angles = [
+        { key: 'front', label: 'Front' },
+        { key: 'left', label: 'Left' },
+        { key: 'right', label: 'Right' },
+        { key: 'up', label: 'Up' },
+        { key: 'down', label: 'Down' }
+      ];
+
+      // Generate photo grid
+      const missingPhotos = child.missingPhotos || [];
+      grid.innerHTML = angles.map(angle => {
+        const isMissing = missingPhotos.includes(angle.key);
+        const photoUrl = `photos/${child.folder}/${child.folder}_${angle.key}.jpg`;
+
+        if (isMissing) {
+          // Missing photos show red warning box
+          return `
+            <div class="text-center">
+              <div class="aspect-square rounded-xl overflow-hidden bg-red-50 border-2 border-red-300 border-dashed mb-2 flex flex-col items-center justify-center">
+                <svg class="w-8 h-8 text-red-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <p class="text-xs text-red-500">Required</p>
+              </div>
+              <p class="text-sm text-red-600 font-medium">${angle.label}</p>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="text-center">
+            <div class="aspect-square rounded-xl overflow-hidden bg-gray-100 mb-2">
+              <img src="${photoUrl}"
+                   class="w-full h-full object-cover"
+                   onerror="this.parentElement.innerHTML='<div class=\\'flex items-center justify-center h-full text-gray-400\\'><svg class=\\'w-8 h-8\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'2\\' d=\\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\\'></path></svg></div>'">
+            </div>
+            <p class="text-sm text-gray-600 font-medium">${angle.label}</p>
+          </div>
+        `;
+      }).join('');
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    // Close child photo Modal
+    function closeChildPhoto() {
+      const modal = document.getElementById('childPhotoModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // Export CSV (simulated)
+    function exportCSV() {
+      // Simulated CSV data
+      const csvData = [
+        ['Time', 'Type', 'Person', 'Camera', 'Alert Level', 'Video Path'],
+        ['2025-01-15 16:47:00', 'Check-out', 'Wen', 'CAM-03 Exit', '-', '/surveillance/cam03/2025-01-15_164700.mp4'],
+        ['2025-01-15 16:32:00', 'Check-out', 'Wei', 'CAM-03 Exit', '-', '/surveillance/cam03/2025-01-15_163200.mp4'],
+        ['2025-01-15 09:20:00', 'Alert', 'Wen', 'CAM-02 Perimeter', 'High', '/surveillance/cam02/2025-01-15_092000.mp4'],
+        ['2025-01-15 08:49:00', 'Check-in', 'Wen', 'CAM-01 Entrance', '-', '/surveillance/cam01/2025-01-15_084900.mp4'],
+        ['2025-01-15 08:45:00', 'Check-in', 'Wei', 'CAM-01 Entrance', '-', '/surveillance/cam01/2025-01-15_084500.mp4']
+      ];
+
+      const csvContent = csvData.map(row => row.join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `event_log_${new Date().toISOString().slice(0,10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      alert('CSV file downloaded!\n\n(This is a simulated function. In production, data should come from backend API)');
+    }
+  </script>
+</body>
+</html>
