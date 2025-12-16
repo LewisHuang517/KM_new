@@ -167,6 +167,52 @@
 </head>
 <body class="bg-gray-100 min-h-screen">
 
+  <!-- Login Page (顯示於預設) -->
+  <div id="loginPage" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-800">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+      <!-- Logo -->
+      <div class="text-center mb-8">
+        <div class="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-800">KindyGuard</h1>
+        <p class="text-gray-500 text-sm">Kindergarten Safety Management System</p>
+      </div>
+
+      <!-- Login Form -->
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+          <input type="text" id="loginUsername" value="teacher_lee" disabled
+            class="w-full border border-gray-300 rounded-lg px-4 py-3 bg-gray-100 text-gray-600 cursor-not-allowed">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <input type="password" id="loginPassword" value="••••••••" disabled
+            class="w-full border border-gray-300 rounded-lg px-4 py-3 bg-gray-100 text-gray-600 cursor-not-allowed">
+        </div>
+        <div class="flex items-center justify-between text-sm">
+          <label class="flex items-center gap-2 text-gray-600">
+            <input type="checkbox" checked disabled class="rounded">
+            Remember me
+          </label>
+          <a href="#" class="text-blue-600 hover:underline">Forgot password?</a>
+        </div>
+        <button onclick="doLogin()" class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-700 transition shadow-lg">
+          Sign In
+        </button>
+      </div>
+
+      <!-- Footer -->
+      <p class="text-center text-gray-400 text-xs mt-6">© 2024 KindyGuard. All rights reserved.</p>
+    </div>
+  </div>
+
+  <!-- Main App Container (預設隱藏) -->
+  <div id="mainApp" class="hidden">
+
   <!-- 警報 Modal (預設隱藏) -->
   <div id="alertModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70">
     <div class="alert-modal text-white rounded-2xl p-8 max-w-lg mx-4 fade-in shadow-2xl">
@@ -637,7 +683,7 @@
             <p class="font-medium text-sm">Teacher Lee</p>
             <p class="text-xs text-gray-400">Administrator</p>
           </div>
-          <button class="text-gray-400 hover:text-white">
+          <button onclick="showLogoutConfirm()" class="text-gray-400 hover:text-white" title="Logout">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
@@ -1203,7 +1249,56 @@
     </main>
   </div>
 
+  </div><!-- End of mainApp -->
+
+  <!-- Logout Confirmation Modal -->
+  <div id="logoutModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70">
+    <div class="bg-white rounded-2xl max-w-sm w-full mx-4 overflow-hidden fade-in">
+      <div class="p-6 text-center">
+        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-gray-800 mb-2">Confirm Logout</h3>
+        <p class="text-gray-500 mb-6">Are you sure you want to logout?</p>
+        <div class="flex gap-3 justify-center">
+          <button onclick="closeLogoutModal()" class="px-6 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50">
+            Cancel
+          </button>
+          <button onclick="doLogout()" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // ========== Login/Logout Functions ==========
+    function doLogin() {
+      document.getElementById('loginPage').classList.add('hidden');
+      document.getElementById('mainApp').classList.remove('hidden');
+    }
+
+    function showLogoutConfirm() {
+      const modal = document.getElementById('logoutModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeLogoutModal() {
+      const modal = document.getElementById('logoutModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function doLogout() {
+      closeLogoutModal();
+      document.getElementById('mainApp').classList.add('hidden');
+      document.getElementById('loginPage').classList.remove('hidden');
+    }
+
     // Update time
     function updateTime() {
       const now = new Date();
