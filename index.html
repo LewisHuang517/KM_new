@@ -1004,7 +1004,7 @@
       document.getElementById('alertTime').textContent = now.toLocaleTimeString('en-US', { hour12: false });
 
       try {
-        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQgHVqjI3LV2CQdBo8/NtWIRDVOr2sORBwI6pt7WkBQCIJTs6J8ZECCu4/ajFAIYse/2rSkFEbrz/LoiExrC8/rGJxEVzfj66CAJGtH7/e0qFxzQ+f37MQ8b1Pv9+jQXJN36//40GCTd+//+MhsX4f3/+zQQGOb9//s2Dx/n/f/6Nw8f5/3/+jYPH+f9//o2Dx/n/f/6Ng==');
+        const audio = new Audio('sounds/alarm.wav');
         audio.play().catch(() => {});
       } catch(e) {}
     }
