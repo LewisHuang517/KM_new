@@ -53,6 +53,39 @@
     .fade-in { animation: fadeIn 0.6s ease-out; }
     .blink { animation: blink 1s infinite; }
 
+    /* Face ID Scanner */
+    @keyframes faceScan {
+      0%, 100% { top: 10%; }
+      50% { top: 80%; }
+    }
+    @keyframes faceGlow {
+      0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+      50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); }
+    }
+    @keyframes captureFlash {
+      0% { opacity: 0; }
+      50% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    .face-scanner {
+      position: relative;
+      border: 3px solid #3b82f6;
+      border-radius: 50%;
+      animation: faceGlow 2s ease-in-out infinite;
+    }
+    .face-scanner::after {
+      content: '';
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+      animation: faceScan 2s ease-in-out infinite;
+    }
+    .capture-flash {
+      animation: captureFlash 0.3s ease-out;
+    }
+
     /* 攝影機掃描線 */
     .scan-line {
       position: absolute;
@@ -331,7 +364,7 @@
 
   <!-- Add Child Modal -->
   <div id="addChildModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70">
-    <div class="bg-white rounded-2xl max-w-2xl w-full mx-4 overflow-hidden fade-in max-h-[90vh] overflow-y-auto">
+    <div id="addChildModalContent" class="bg-white rounded-2xl max-w-xl w-full mx-4 overflow-hidden fade-in transition-all duration-500">
       <div class="flex items-center justify-between p-4 border-b">
         <h3 class="text-gray-800 font-bold text-lg">Add New Child</h3>
         <button onclick="closeAddChildModal()" class="text-gray-400 hover:text-gray-600">
@@ -341,95 +374,135 @@
         </button>
       </div>
       <div class="p-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-            <input type="text" id="newChildName" placeholder="Enter name"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <!-- Step 1: Input Fields -->
+        <div class="flex gap-3 mb-4">
+          <div class="flex-1">
+            <label class="block text-xs font-medium text-gray-500 mb-1">Name</label>
+            <input type="text" id="newChildName" placeholder="Name"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Class</label>
-            <select id="newChildClass" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-              <option value="">Select Class</option>
+          <div class="w-28">
+            <label class="block text-xs font-medium text-gray-500 mb-1">Class</label>
+            <select id="newChildClass" class="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <option value="">Select</option>
               <option value="Class A">Class A</option>
               <option value="Class B">Class B</option>
               <option value="Class C">Class C</option>
             </select>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
-            <input type="text" id="newChildId" placeholder="e.g., 000001"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          <div class="w-28">
+            <label class="block text-xs font-medium text-gray-500 mb-1">ID</label>
+            <input type="text" id="newChildId" placeholder="000001"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
           </div>
         </div>
 
-        <div class="mb-6">
-          <label class="block text-sm font-medium text-gray-700 mb-3">Face Registration Photos (5 angles required)</label>
-          <div class="grid grid-cols-5 gap-3">
-            <div class="text-center">
-              <div class="aspect-square bg-gray-100 rounded-xl flex items-center justify-center mb-2 border-2 border-dashed border-gray-300 hover:border-blue-400 cursor-pointer relative overflow-hidden">
-                <img id="photoFront" src="" class="w-full h-full object-cover hidden">
-                <div id="placeholderFront" class="flex flex-col items-center text-gray-400">
-                  <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                  </svg>
-                </div>
+        <!-- Step 2: Face Scanner (initially hidden) -->
+        <div id="faceScannerSection" class="hidden">
+          <div class="bg-gray-900 rounded-xl p-6 mb-4">
+            <div class="flex flex-col items-center">
+              <!-- Scanner Circle -->
+              <div class="face-scanner w-48 h-48 rounded-full overflow-hidden mb-4 relative">
+                <img id="scannerImage" src="" class="w-full h-full object-cover">
+                <!-- Flash overlay -->
+                <div id="captureFlash" class="absolute inset-0 bg-white opacity-0 pointer-events-none"></div>
               </div>
-              <span class="text-xs text-gray-500">Front</span>
-            </div>
-            <div class="text-center">
-              <div class="aspect-square bg-gray-100 rounded-xl flex items-center justify-center mb-2 border-2 border-dashed border-gray-300 hover:border-blue-400 cursor-pointer relative overflow-hidden">
-                <img id="photoLeft" src="" class="w-full h-full object-cover hidden">
-                <div id="placeholderLeft" class="flex flex-col items-center text-gray-400">
-                  <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                  </svg>
-                </div>
-              </div>
-              <span class="text-xs text-gray-500">Left</span>
-            </div>
-            <div class="text-center">
-              <div class="aspect-square bg-gray-100 rounded-xl flex items-center justify-center mb-2 border-2 border-dashed border-gray-300 hover:border-blue-400 cursor-pointer relative overflow-hidden">
-                <img id="photoRight" src="" class="w-full h-full object-cover hidden">
-                <div id="placeholderRight" class="flex flex-col items-center text-gray-400">
-                  <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                  </svg>
-                </div>
-              </div>
-              <span class="text-xs text-gray-500">Right</span>
-            </div>
-            <div class="text-center">
-              <div class="aspect-square bg-gray-100 rounded-xl flex items-center justify-center mb-2 border-2 border-dashed border-gray-300 hover:border-blue-400 cursor-pointer relative overflow-hidden">
-                <img id="photoUp" src="" class="w-full h-full object-cover hidden">
-                <div id="placeholderUp" class="flex flex-col items-center text-gray-400">
-                  <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                  </svg>
-                </div>
-              </div>
-              <span class="text-xs text-gray-500">Up</span>
-            </div>
-            <div class="text-center">
-              <div class="aspect-square bg-gray-100 rounded-xl flex items-center justify-center mb-2 border-2 border-dashed border-gray-300 hover:border-blue-400 cursor-pointer relative overflow-hidden">
-                <img id="photoDown" src="" class="w-full h-full object-cover hidden">
-                <div id="placeholderDown" class="flex flex-col items-center text-gray-400">
-                  <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                  </svg>
-                </div>
-              </div>
-              <span class="text-xs text-gray-500">Down</span>
+              <!-- Instruction -->
+              <p id="scanInstruction" class="text-white text-lg font-medium mb-2">Please face Front</p>
+              <p class="text-gray-400 text-sm mb-4">Position face and press capture</p>
+              <!-- Capture Button -->
+              <button id="captureBtn" onclick="capturePhoto()" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium flex items-center gap-2 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Capture
+              </button>
             </div>
           </div>
-          <p class="text-xs text-gray-400 mt-2">* In demo mode, sample photos will be auto-generated</p>
+
+          <!-- Photo Grid -->
+          <div id="photoGridSection" class="mb-4">
+            <div class="grid grid-cols-5 gap-2">
+              <div class="text-center">
+                <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-1 border-2 border-gray-200">
+                  <img id="capturedFront" src="" class="w-full h-full object-cover hidden">
+                  <div id="emptyFront" class="w-full h-full flex items-center justify-center text-gray-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                  </div>
+                </div>
+                <span class="text-xs text-gray-500">Front</span>
+              </div>
+              <div class="text-center">
+                <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-1 border-2 border-gray-200">
+                  <img id="capturedLeft" src="" class="w-full h-full object-cover hidden">
+                  <div id="emptyLeft" class="w-full h-full flex items-center justify-center text-gray-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                  </div>
+                </div>
+                <span class="text-xs text-gray-500">Left</span>
+              </div>
+              <div class="text-center">
+                <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-1 border-2 border-gray-200">
+                  <img id="capturedRight" src="" class="w-full h-full object-cover hidden">
+                  <div id="emptyRight" class="w-full h-full flex items-center justify-center text-gray-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                  </div>
+                </div>
+                <span class="text-xs text-gray-500">Right</span>
+              </div>
+              <div class="text-center">
+                <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-1 border-2 border-gray-200">
+                  <img id="capturedUp" src="" class="w-full h-full object-cover hidden">
+                  <div id="emptyUp" class="w-full h-full flex items-center justify-center text-gray-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                  </div>
+                </div>
+                <span class="text-xs text-gray-500">Up</span>
+              </div>
+              <div class="text-center">
+                <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-1 border-2 border-gray-200">
+                  <img id="capturedDown" src="" class="w-full h-full object-cover hidden">
+                  <div id="emptyDown" class="w-full h-full flex items-center justify-center text-gray-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                  </div>
+                </div>
+                <span class="text-xs text-gray-500">Down</span>
+              </div>
+            </div>
+          </div>
         </div>
 
+        <!-- Registration Complete Message (initially hidden) -->
+        <div id="registrationComplete" class="hidden text-center py-4 mb-4">
+          <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <p class="text-lg font-semibold text-gray-800">Registration Complete!</p>
+          <p class="text-sm text-gray-500">All 5 angles captured successfully</p>
+        </div>
+
+        <!-- Buttons -->
         <div class="flex justify-end gap-3">
           <button onclick="closeAddChildModal()" class="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50">
             Cancel
           </button>
-          <button onclick="addNewChild()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button id="startRegBtn" onclick="startFaceRegistration()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            Start Face Registration
+          </button>
+          <button id="addChildBtn" onclick="addNewChild()" class="hidden px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
             Add Child
           </button>
         </div>
@@ -1787,6 +1860,17 @@
     ];
 
     // ========== Add Child Functions ==========
+    const faceAngles = ['Front', 'Left', 'Right', 'Up', 'Down'];
+    const angleInstructions = {
+      'Front': 'Please face Front',
+      'Left': 'Please turn Left',
+      'Right': 'Please turn Right',
+      'Up': 'Please look Up',
+      'Down': 'Please look Down'
+    };
+    let currentAngleIndex = 0;
+    let registrationTimer = null;
+
     function openAddChildModal() {
       const modal = document.getElementById('addChildModal');
       // Reset form
@@ -1794,18 +1878,21 @@
       document.getElementById('newChildClass').value = '';
       document.getElementById('newChildId').value = '';
 
-      // Show placeholder images (using existing Wei photos as demo)
-      const angles = ['Front', 'Left', 'Right', 'Up', 'Down'];
-      const angleMap = { 'Front': 'front', 'Left': 'left', 'Right': 'right', 'Up': 'up', 'Down': 'down' };
+      // Reset state
+      document.getElementById('faceScannerSection').classList.add('hidden');
+      document.getElementById('registrationComplete').classList.add('hidden');
+      document.getElementById('startRegBtn').classList.remove('hidden');
+      document.getElementById('addChildBtn').classList.add('hidden');
 
-      angles.forEach(angle => {
-        const img = document.getElementById('photo' + angle);
-        const placeholder = document.getElementById('placeholder' + angle);
-        // Use Wei's photos as demo placeholders
-        img.src = `photos/wei_classA_000012/wei_classA_000012_${angleMap[angle]}.jpg`;
-        img.classList.remove('hidden');
-        placeholder.classList.add('hidden');
+      // Reset captured photos
+      faceAngles.forEach(angle => {
+        const img = document.getElementById('captured' + angle);
+        const empty = document.getElementById('empty' + angle);
+        if (img) { img.classList.add('hidden'); img.src = ''; }
+        if (empty) empty.classList.remove('hidden');
       });
+
+      currentAngleIndex = 0;
 
       modal.classList.remove('hidden');
       modal.classList.add('flex');
@@ -1815,17 +1902,101 @@
       const modal = document.getElementById('addChildModal');
       modal.classList.add('hidden');
       modal.classList.remove('flex');
+      // Clear any running timers
+      if (registrationTimer) {
+        clearTimeout(registrationTimer);
+        registrationTimer = null;
+      }
+    }
+
+    function startFaceRegistration() {
+      const name = document.getElementById('newChildName').value.trim();
+      const classVal = document.getElementById('newChildClass').value;
+      const studentId = document.getElementById('newChildId').value.trim();
+
+      if (!name || !classVal || !studentId) {
+        alert('Please fill in Name, Class, and ID first');
+        return;
+      }
+
+      // Hide start button
+      document.getElementById('startRegBtn').classList.add('hidden');
+
+      // Show scanner section
+      document.getElementById('faceScannerSection').classList.remove('hidden');
+
+      // Start registration process
+      currentAngleIndex = 0;
+      captureNextAngle();
+    }
+
+    function captureNextAngle() {
+      if (currentAngleIndex >= faceAngles.length) {
+        // All done!
+        finishRegistration();
+        return;
+      }
+
+      const angle = faceAngles[currentAngleIndex];
+      const angleLower = angle.toLowerCase();
+
+      // Update instruction
+      document.getElementById('scanInstruction').textContent = angleInstructions[angle];
+
+      // Show image in scanner (using register folder)
+      const scannerImg = document.getElementById('scannerImage');
+      scannerImg.src = `register/${angleLower}.jpg`;
+
+      // Enable capture button
+      document.getElementById('captureBtn').disabled = false;
+    }
+
+    function capturePhoto() {
+      const angle = faceAngles[currentAngleIndex];
+      const angleLower = angle.toLowerCase();
+
+      // Disable button during capture
+      document.getElementById('captureBtn').disabled = true;
+
+      // Flash effect
+      const flash = document.getElementById('captureFlash');
+      flash.classList.add('capture-flash');
+      flash.style.opacity = '1';
+
+      setTimeout(() => {
+        flash.style.opacity = '0';
+        flash.classList.remove('capture-flash');
+
+        // Show captured photo in grid
+        const capturedImg = document.getElementById('captured' + angle);
+        const emptyDiv = document.getElementById('empty' + angle);
+        capturedImg.src = `register/${angleLower}.jpg`;
+        capturedImg.classList.remove('hidden');
+        emptyDiv.classList.add('hidden');
+
+        // Move to next angle
+        currentAngleIndex++;
+
+        // Small delay before next angle
+        setTimeout(() => {
+          captureNextAngle();
+        }, 300);
+      }, 300);
+    }
+
+    function finishRegistration() {
+      // Hide scanner, show complete message
+      document.querySelector('#faceScannerSection .bg-gray-900').classList.add('hidden');
+      document.getElementById('registrationComplete').classList.remove('hidden');
+
+      // Show add child button
+      document.getElementById('addChildBtn').classList.remove('hidden');
     }
 
     function addNewChild() {
       const name = document.getElementById('newChildName').value.trim();
       const classVal = document.getElementById('newChildClass').value;
       const studentId = document.getElementById('newChildId').value.trim();
-
-      if (!name || !classVal || !studentId) {
-        alert('Please fill in all required fields');
-        return;
-      }
 
       // Create folder name format: name_class_studentId
       const classShort = classVal.replace('Class ', 'class');
@@ -1843,19 +2014,17 @@
         studentId: studentId,
         status: 'active',
         faceUpdate: 0,
-        missingPhotos: []
+        missingPhotos: [],
+        avatarPath: 'register/front.jpg'  // Demo: use registration photo
       };
 
-      childrenData.push(newChild);
+      childrenData.unshift(newChild);  // Add to beginning so it shows first
 
       // Refresh the grid
       filterChildren();
 
       // Close modal
       closeAddChildModal();
-
-      // Show success message
-      alert(`Child "${name}" added successfully!\n\nNote: In production, photos would be saved to:\nphotos/${folder}/`);
     }
 
     // Filter children
@@ -1890,8 +2059,8 @@
       }
 
       container.innerHTML = data.map(item => {
-        // Use photos folder front.jpg as avatar
-        const avatarUrl = `photos/${item.folder}/${item.folder}_front.jpg`;
+        // Use avatarPath if exists (for demo), otherwise use photos folder
+        const avatarUrl = item.avatarPath || `photos/${item.folder}/${item.folder}_front.jpg`;
         const isIncomplete = item.status === 'incomplete' || (item.missingPhotos && item.missingPhotos.length > 0);
         const needUpdate = item.status === 'needUpdate' || item.faceUpdate >= 90;
 
@@ -1970,9 +2139,12 @@
 
       // Generate photo grid
       const missingPhotos = child.missingPhotos || [];
+      const isDemo = !!child.avatarPath;  // Demo children use register folder
       grid.innerHTML = angles.map(angle => {
         const isMissing = missingPhotos.includes(angle.key);
-        const photoUrl = `photos/${child.folder}/${child.folder}_${angle.key}.jpg`;
+        const photoUrl = isDemo
+          ? `register/${angle.key}.jpg`
+          : `photos/${child.folder}/${child.folder}_${angle.key}.jpg`;
 
         if (isMissing) {
           // Missing photos show red warning box
