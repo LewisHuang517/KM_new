@@ -478,14 +478,10 @@
                   </svg>
                   RTSP Streaming
                 </span>
-                <div class="flex gap-2">
-                  <button class="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded-lg">1x2</button>
-                  <button class="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200">2x2</button>
-                </div>
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
+            <div id="cameraGrid" class="grid grid-cols-2 gap-4">
               <!-- Camera 1 - Entrance -->
               <div class="glass-card rounded-2xl overflow-hidden">
                 <div class="relative bg-gray-900 aspect-video">
@@ -994,6 +990,9 @@
       document.getElementById('pageTitle').textContent = titles[tabName] || 'Live Monitoring Center';
     }
 
+    // Alert audio reference
+    let alertAudio = null;
+
     // Trigger alert
     function triggerAlert() {
       const modal = document.getElementById('alertModal');
@@ -1004,8 +1003,13 @@
       document.getElementById('alertTime').textContent = now.toLocaleTimeString('en-US', { hour12: false });
 
       try {
-        const audio = new Audio('sounds/alarm.wav');
-        audio.play().catch(() => {});
+        // Stop previous audio if playing
+        if (alertAudio) {
+          alertAudio.pause();
+          alertAudio.currentTime = 0;
+        }
+        alertAudio = new Audio('sounds/alarm.wav');
+        alertAudio.play().catch(() => {});
       } catch(e) {}
     }
 
@@ -1014,7 +1018,14 @@
       const modal = document.getElementById('alertModal');
       modal.classList.add('hidden');
       modal.classList.remove('flex');
+
+      // Stop audio when closing
+      if (alertAudio) {
+        alertAudio.pause();
+        alertAudio.currentTime = 0;
+      }
     }
+
 
     // ========== Live Monitoring Video Config ==========
     // Configure live monitoring video sources here

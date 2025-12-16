@@ -1,6 +1,6 @@
 """
 Simple HTTP Server for KindyGuard Demo
-Run this script and open http://localhost:8000/KindyGuard_Demo.html
+Run this script and open http://localhost:8000/index.html
 """
 
 import http.server
@@ -28,9 +28,11 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 Handler = http.server.SimpleHTTPRequestHandler
 
-# Add MIME type for mp4
+# Add MIME types
 Handler.extensions_map.update({
     '.mp4': 'video/mp4',
+    '.wav': 'audio/wav',
+    '.mp3': 'audio/mpeg',
 })
 
 local_ip = get_local_ip()
@@ -38,15 +40,15 @@ local_ip = get_local_ip()
 print("=" * 50)
 print("KindyGuard Demo Server")
 print("=" * 50)
-print(f"本機: http://localhost:{PORT}/KindyGuard_Demo.html")
-print(f"區網: http://{local_ip}:{PORT}/KindyGuard_Demo.html")
+print(f"本機: http://localhost:{PORT}/index.html")
+print(f"區網: http://{local_ip}:{PORT}/index.html")
 print("-" * 50)
 print("分享上方「區網」網址給同區網的使用者即可連線")
 print("按 Ctrl+C 停止伺服器")
 print("=" * 50)
 
 # Auto open browser
-webbrowser.open(f'http://localhost:{PORT}/KindyGuard_Demo.html')
+webbrowser.open(f'http://localhost:{PORT}/index.html')
 
 with socketserver.TCPServer(("", PORT), Handler) as httpd:
     try:
